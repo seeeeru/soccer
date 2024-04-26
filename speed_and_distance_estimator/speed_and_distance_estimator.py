@@ -2,6 +2,7 @@ import cv2
 import sys 
 sys.path.append('../')
 from utils import measure_distance ,get_foot_position
+import numpy as np
 
 class SpeedAndDistance_Estimator():
     def __init__(self):
@@ -72,28 +73,50 @@ class SpeedAndDistance_Estimator():
         
         return output_frames
     
+    
+    def get_positions_for_specific_track_ids(self, tracks, target_ids):
+        specific_position = {}
+        for object_name, object_tracks in tracks.items():
+            if object_name != "players":
+                continue
+            for frame_num,frame_tracks in enumerate(object_tracks):
+                for track_id, track_info in frame_tracks.items():
+                    if track_id in target_ids and 'position' in track_info:
+                        if frame_num not in specific_position:
+                            specific_position[frame_num] = {}
+                        if track_id not in specific_position[frame_num]:
+                            specific_position[frame_num][track_id] = track_info['position']
+        return specific_position
+    
 
-    def player_binding_line(self,frames,tracks):
-        output_frames2 = []
-        for frame_num, frame in enumerate(frames):
+    
+    
+    def draw_lines_between_tracks(self, frames, specific_positions, target_ids):
+        output_frames = []
+    
+        for frame_num, frame_positions in specific_positions.items():
+            frame = frames[frame_num]
+        
+            for i in range(len(target_ids) - 1):
+                start_id = target_ids[i]
+                end_id = target_ids[i+1]
             
-            for object, object_tracks in tracks.items():
-                if object == "ball" or object == "referees":
+                if start_id not in frame_positions or end_id not in frame_positions:
                     continue
+            
+                start_point = frame_positions[start_id]
+                end_point = frame_positions[end_id]
+                cv2.line(frame, start_point, end_point, (0, 0, 255), 2)
 
-                for _, track_info in object_tracks[frame_num].items():
-                    bbox = track_info['bbox']
-                    position = get_foot_position(bbox)
-                    position = list(position)
-                    position = tuple(map(int,position))
+                distance = np.sqrt((end_point[0] - start_point[0])**2 + (end_point[1] - start_point[1])**2)
+                distance_m=distance/9
+                
 
-                    for i in position:
-                        if i<8:
-                            start_point = position[i]
-                            end_point = position[i+1]
-                            
-                            cv2.line(frame, start_point, end_point, color=(230, 0, 20), thickness=2)
+                mid_point = ((start_point[0] + end_point[0]) // 2, (start_point[1] + end_point[1]) // 2)
+                cv2.putText(frame,f"{distance_m:.2f} m" , mid_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
-            output_frames2.append(frame)
 
-        return output_frames2
+            output_frames.append(frame)
+        
+        return output_frames
+    

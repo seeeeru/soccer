@@ -7,6 +7,7 @@ from player_ball_assigner import PlayerBallAssigner
 from camera_movement_estimator import CameraMovementEstimator
 from view_transformer import ViewTransformer
 from speed_and_distance_estimator import SpeedAndDistance_Estimator
+import sys
 
 
 def main():
@@ -81,8 +82,15 @@ def main():
     ## Draw Speed and Distance
     speed_and_distance_estimator.draw_speed_and_distance(output_video_frames,tracks)
 
-    #선을 그려봐요
-    speed_and_distance_estimator.player_binding_line(output_video_frames,tracks)
+
+    #선긋기
+    input_str = input("원하는 target_ids를 콤마로 구분하여 입력하세요 (예: 6,5,15): ")
+    input_list = input_str.split(',')
+    target_ids = [int(item.strip()) for item in input_list]
+    
+    specific_postions = speed_and_distance_estimator.get_positions_for_specific_track_ids(tracks, target_ids)
+    
+    speed_and_distance_estimator.draw_lines_between_tracks(output_video_frames, specific_postions, target_ids)
 
 
 
